@@ -1,4 +1,7 @@
 import argparse
+import time
+import random
+import logging
 from live_recorder import you_live
 from live_recorder import version
 
@@ -45,39 +48,48 @@ def main():
         except:
             print(args.cookies_path)
             print('指定cookie路径不存在')
-    
-    recorder = you_live.Recorder.createRecorder(liver, args.id, **params)
-     
-    # 获取房间信息
-    roomInfo = recorder.getRoomInfo()
-    if debug:
-        print(roomInfo)
-     
-    # 获取如果在直播，那么录制
-    if roomInfo['live_status'] == '1':
-        print(roomInfo['live_rates'])
-        if args.qn:
-            qn = args.qn
-        else:
-            qn = input("输入要录制的清晰度\r\n")
-             
-        live_url = recorder.getLiveUrl(qn = qn) 
+
+    while True:
+        recorder = you_live.Recorder.createRecorder(liver, args.id, **params)
+
+        # 获取房间信息
+        roomInfo = recorder.getRoomInfo()
         if debug:
-            print(live_url)
-        download_thread = you_live.DownloadThread(recorder)
-        monitoring_thread = you_live.MonitoringThread(recorder)
-           
-        download_thread.start()
-        monitoring_thread.start()
-           
-        while recorder.downloadFlag:
-            todo = input("输入q或stop停止录制\r\n")
-            if todo == "q" or todo == "stop":
-                recorder.downloadFlag = False
+            print(roomInfo)
+
+        # 获取如果在直播，那么录制
+        if roomInfo['live_status'] == '1':
+            print(roomInfo['live_rates'])
+            if args.qn:
+                qn = args.qn
             else:
-                print("请输入合法命令！！！")
-    else:
-        print("主播当前不在线!!")
+                qn = input("输入要录制的清晰度\r\n")
+
+            live_url = recorder.getLiveUrl(qn = qn)
+            if debug:
+                print(live_url)
+            download_thread = you_live.DownloadThread(recorder)
+            monitoring_thread = you_live.MonitoringThread(recorder)
+
+            download_thread.start()
+            monitoring_thread.start()
+
+            while recorder.downloadFlag:
+                # TODO: 雑にSleepしてるのでスレッド監視とかをする
+                time.sleep(5)
+                # todo = input("输入q或stop停止录制\r\n")
+                # if todo == "q" or todo == "stop":
+                #     recorder.downloadFlag = False
+                # else:
+                #     print("请输入合法命令！！！")
+            # TODO: Change this log message in Chinese.
+            print('Finished download!')
+        else:
+            print("主播当前不在线!!")
+            # TODO: 定期的にポーリングするのではなくて何らかの方法でPush的に開始させる
+            sleep_time = 5 + random.uniform(0, 5)
+            print("sleeping " + str(sleep_time))
+            time.sleep(sleep_time)
 
 if __name__ == '__main__':
     main()
